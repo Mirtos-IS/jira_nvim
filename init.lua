@@ -1,3 +1,7 @@
 local M = {}
 
-local M.setup()
+function M.setup(opt)
+  local opt = opt or {}
+end
+
+return M
