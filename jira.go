@@ -8,8 +8,8 @@ import (
 	"net/http"
 )
 
-var token = apiToken()
 var paragraph = "paragraph"
+var text = "text"
 
 type Token struct {
     User string
@@ -17,20 +17,32 @@ type Token struct {
 }
 
 type Ticket struct {
-    Id string
-    TicketNumber string `json:"key"`
-    Fields Fields
+    TicketNumber string
+    Title string
+    Reporter string
+    Assignee string
+    Priority string
+    Status string
+    Description string
+    Comments []string //TODO: implement this
 }
 
-type Fields struct {
+type JiraJson struct {
+    Id string
+    TicketNumber string `json:"key"`
+    Fields TicketFields
+}
+
+type TicketFields struct {
     Summary string
     Reporter Creator
+    Assignee Creator
     Created string
     Updated string
     Priority map[string]any //This is a nice way with i don't want to struct the data
     Status map[string]any
     Description Description
-    Comment map[string]any
+    Comment Comment
 }
 
 type Creator struct {
@@ -49,64 +61,126 @@ type Content struct {
 type InnerContent struct {
     Type string
     Text string
+    Attrs map[string]any
 }
 
-
-func redirectPolicyFunc(request *http.Request, via []*http.Request) error{
-    request.SetBasicAuth(token.User, token.Token)
-  return nil
+type Comment struct {
+    Comments []Comments
 }
 
-func apiToken() Token {
-    byteValue, err := ioutil.ReadFile("./.pass")
-    if err != nil {
-        fmt.Println("couldn't find file .pass with credentials")
-    }
+type Comments struct {
+    Author map[string]any
+    Body Body
 
-    var token Token
-    err = json.Unmarshal(byteValue, &token)
-    if err != nil {
-        fmt.Println(err)
-    }
-
-    return token
 }
 
-func parseJiraTicket(body []byte) string {
+type Body struct {
+    Type string
+    Content []Content
+}
+
+func parseJiraTicket(body []byte) *Ticket {
     var ticket Ticket
-    err := json.Unmarshal(body, &ticket)
+    var jirajson JiraJson
+    err := json.Unmarshal(body, &jirajson)
     if err != nil {
         fmt.Println(err)
     }
-    parseDescription(&ticket)
-    return "test"
+    ticket.TicketNumber = jirajson.TicketNumber
+    ticket.Description = parseDescription(&jirajson)
+    ticket.Title = parseTitle(&jirajson)
+    ticket.Priority = parsePriority(&jirajson)
+    ticket.Reporter = parseReporter(&jirajson)
+    ticket.Assignee = jirajson.Fields.Assignee.DisplayName
+    ticket.Status = jirajson.Fields.Status["name"].(string)
+    ticket.Comments = parseComments(&jirajson)
+
+    return &ticket
 }
 
-func parseDescription(ticket *Ticket) {
+func parseDescription(ticket *JiraJson) string {
     content := ticket.Fields.Description.Content
+    return parseContent(content)
+}
+
+func parseContent(content []Content) string {
+
+    var parsedContent string
     for i := range content {
         if content[i].Type != paragraph {
             continue
         }
-        fmt.Println(content[i].Content[0].Text)
+        parsedContent += parseInnerContent(content[i].Content) + "\n\n"
     }
+    return parsedContent
+
 }
 
-func main() {
+func parseTitle(ticket *JiraJson) string {
+    title := ticket.Fields.Summary
+    return title
+}
+
+func parsePriority(ticket *JiraJson) string {
+    priority := ticket.Fields.Priority["name"].(string)
+    return priority
+}
+
+func parseReporter(ticket *JiraJson) string {
+    priority := ticket.Fields.Reporter.DisplayName
+    return priority
+}
+
+func parseComments(ticket *JiraJson) []string {
+    comments := ticket.Fields.Comment.Comments
+    var parsedComments []string
+    for i := range comments {
+        singleComment := comments[i].Author["displayName"].(string) + ": "
+        singleComment += parseContent(comments[i].Body.Content)
+        parsedComments = append(parsedComments, singleComment)
+
+    }
+    return parsedComments
+}
+
+func parseInnerContent(content []InnerContent) string {
+    var parsedContent string
+    for i := range content {
+        if content[i].Type != text && content[i].Type != "mention" {
+            continue
+        }
+
+        if content[i].Type == "mention" {
+            parsedContent += content[i].Attrs["text"].(string)
+        }
+        parsedContent += content[i].Text
+
+    }
+    return parsedContent
+}
+
+func requestSingleTicket(ticketNumber string) (*Ticket, error) {
     client := &http.Client{
         CheckRedirect: redirectPolicyFunc,
     }
 
-    request, err := http.NewRequest("GET", "https://turnoverbnb.atlassian.net/rest/api/3/issue/TBB-5539", nil)
+    baseURL := "https://turnoverbnb.atlassian.net/rest/api/3/issue/"
+    request, err := http.NewRequest("GET", baseURL + ticketNumber, nil)
+    request.Header.Set("Accept", "application/json")
     request.SetBasicAuth(token.User, token.Token)
 
     resp, err := client.Do(request)
     if err != nil {
-        log.Fatalln(err)
+        return nil, err
     }
     body, err := ioutil.ReadAll(resp.Body)
     if err != nil {
         log.Fatalln(err)
+        return nil, err
     }
-    parseJiraTicket(body)
+    ticket := parseJiraTicket(body)
+    return ticket, nil
 }
+
+
+

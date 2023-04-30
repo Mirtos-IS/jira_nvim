@@ -1,0 +1,6 @@
+we currently have two commands
+we expect to have your api token in a json style file call ".token" with the pair "token : <your token>", this token file should be on the same file
+
+--jql <query> return a list with all tickets that match that jql query
+
+--ticket <ticket-key> return all the info for one ticket for the ticket key (like UX-445)
