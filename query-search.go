@@ -53,7 +53,6 @@ func requestQueryJira(query string) ([]Search, error) {
 
     urlRaw := queryUrl.Encode()
     fullUrl := baseURL + urlRaw
-    fmt.Println(fullUrl)
 
     request, err := http.NewRequest("GET", fullUrl, nil)
 

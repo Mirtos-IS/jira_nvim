@@ -24,7 +24,7 @@ type Ticket struct {
     Priority string
     Status string
     Description string
-    Comments []string //TODO: implement this
+    Comments []string
 }
 
 type JiraJson struct {

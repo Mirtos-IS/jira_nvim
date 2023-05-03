@@ -43,9 +43,8 @@ func main() {
         if err != nil {
             fmt.Println(err)
         }
-        for i := range result {
-            fmt.Println(result[i])
-        }
+        resultJson, err := json.Marshal(result)
+        fmt.Printf(string(resultJson))
         return
     }
     if args[0] == "--ticket" {
@@ -53,7 +52,9 @@ func main() {
         if err != nil {
             fmt.Println(err)
         }
-        fmt.Println(result)
+
+        resultJson, err := json.Marshal(result)
+        fmt.Println(string(resultJson))
         return
     }
     if args[0] == "--help" {
