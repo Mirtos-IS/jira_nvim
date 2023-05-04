@@ -91,7 +91,7 @@ func parseJiraTicket(body []byte) *Ticket {
     ticket.Title = parseTitle(&jirajson)
     ticket.Priority = parsePriority(&jirajson)
     ticket.Reporter = parseReporter(&jirajson)
-    ticket.Assignee = jirajson.Fields.Assignee.DisplayName
+    ticket.Assignee = parseAssignee(&jirajson)
     ticket.Status = jirajson.Fields.Status["name"].(string)
     ticket.Comments = parseComments(&jirajson)
 
@@ -101,6 +101,13 @@ func parseJiraTicket(body []byte) *Ticket {
 func parseDescription(ticket *JiraJson) string {
     content := ticket.Fields.Description.Content
     return parseContent(content)
+}
+
+func parseAssignee(ticket *JiraJson) string {
+    if ticket.Fields.Assignee.DisplayName != "" {
+        return ticket.Fields.Assignee.DisplayName
+    }
+    return "Not Assigned"
 }
 
 func parseContent(content []Content) string {

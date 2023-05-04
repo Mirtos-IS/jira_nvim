@@ -21,22 +21,31 @@ end
 
 local function toArrayString(ticket)
   local array = {}
+  table.insert(array, "---Ticket Number------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.TicketNumber)
+  table.insert(array, "---Title--------------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.Title)
+  table.insert(array, "---Reporter-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.Reporter)
+  table.insert(array, "---Assignee-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.Assignee)
+  table.insert(array, "---Priority-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.Priority)
+  table.insert(array, "---Status-------------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.Status)
-  -- table.insert(array, ticket.Description)
+  table.insert(array, "---Description--------------------------------------------------------------------------------------------------------------------------------------------------------------")
   local desc = string.gmatch(ticket.Description, "[^\n]+")
   for i in desc do
     table.insert(array, i)
   end
-  notify(M.dump(ticket.Comments))
-  for _, v in ticket.Comments do
-    notify(M.dump(v))
+  table.insert(array, "---Comments-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
+  if type(ticket.Comments) ~= nil then
+    for i in ipairs(ticket.Comments) do
+      local comment = string.gsub(ticket.Comments[i], "\n", "")
+      table.insert(array, comment)
+  table.insert(array, "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+    end
   end
-  -- table.insert(array, ticket.Description)
   return array
 end
 function M.goApi(key)
@@ -74,6 +83,8 @@ function M.open_win(win_h, win_w)
   }
   local win = vim.api.nvim_open_win(buf, true, opts)
   vim.api.nvim_win_set_option(win, "winhighlight", 'Normal:Normal,FloatBorder:FloatBorder')
+  vim.api.nvim_buf_set_option(buf, "filetype", "lua")
+  vim.keymap.set('n', '<ESC>', '<cmd>q!<CR>', {silent=true, buffer=buf})
 end
 
 function M.setLinesToWin(ticket)
@@ -81,7 +92,7 @@ function M.setLinesToWin(ticket)
   vim.api.nvim_buf_set_option(buf, "modifiable", true)
 
   vim.api.nvim_buf_set_lines(buf, 0, -1,false, lines)
-  vim.api.nvim_buf_set_option(buf, "bufhidden", false)
+  vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
 end
 
 function M.dump(o)
