@@ -16,9 +16,9 @@ func redirectPolicyFunc(request *http.Request, via []*http.Request) error{
 }
 
 func apiToken() Token {
-    byteValue, err := ioutil.ReadFile(".token")
+    byteValue, err := ioutil.ReadFile("/home/mirtos/GitRepos/telescope-jira/.token")
     if err != nil {
-        fmt.Println("couldn't find file .pass with credentials")
+        fmt.Println("couldn't find file .token with credentials")
     }
 
     var token Token
@@ -38,13 +38,22 @@ func helpCommands() string {
 func main() {
     args := os.Args[1:]
 
+    fmt.Println(args)
     if args[0] == "--query" {
+        if len(args) <= 1 {
+            fmt.Println("not enough arguments")
+        }
         result, err := requestQueryJira(args[1])
         if err != nil {
             fmt.Println(err)
         }
-        resultJson, err := json.Marshal(result)
-        fmt.Printf(string(resultJson))
+
+        for _,v := range result {
+            resultJson, _ := json.Marshal(v)
+            fmt.Println(string(resultJson))
+        }
+        // resultJson, err := json.Marshal(result)
+        // fmt.Println(string(resultJson))
         return
     }
     if args[0] == "--ticket" {
@@ -59,6 +68,7 @@ func main() {
     }
     if args[0] == "--help" {
         fmt.Println(helpCommands())
+        return
     }
     fmt.Println("invalid command")
     return

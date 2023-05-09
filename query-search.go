@@ -61,14 +61,17 @@ func requestQueryJira(query string) ([]Search, error) {
 
     resp, err := client.Do(request)
     if err != nil {
+        fmt.Println(err)
         return nil, err
     }
     body, err := ioutil.ReadAll(resp.Body)
     if err != nil {
         log.Fatalln(err)
+        fmt.Println(err)
         return nil, err
     }
-    return parseQuerySearches(body), nil
+    searches := parseQuerySearches(body)
+    return searches, nil
 }
 
 func parseQuerySearches(body []byte) []Search {

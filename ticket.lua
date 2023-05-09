@@ -1,5 +1,7 @@
 local notify = require("notify").notify
+local utils = require("utils")
 local buf
+local cachedTickets = {}
 local M = {}
 
 --The ticket has this structure
@@ -14,12 +16,17 @@ local M = {}
 --     Comments []string
 -- }
 function M.openTicket(key)
+  if cachedTickets[key] ~= nil then
+    M.open_win()
+    M.setLinesToWin(cachedTickets[key])
+  end
   local ticket = M.goApi(key)
   M.open_win()
-  M.setLinesToWin(ticket)
+  local parsedTicket = M.toArrayString(ticket)
+  M.setLinesToWin(parsedTicket)
 end
 
-local function toArrayString(ticket)
+function M.toArrayString(ticket)
   local array = {}
   table.insert(array, "---Ticket Number------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.TicketNumber)
@@ -34,26 +41,29 @@ local function toArrayString(ticket)
   table.insert(array, "---Status-------------------------------------------------------------------------------------------------------------------------------------------------------------------")
   table.insert(array, ticket.Status)
   table.insert(array, "---Description--------------------------------------------------------------------------------------------------------------------------------------------------------------")
+
   local desc = string.gmatch(ticket.Description, "[^\n]+")
   for i in desc do
     table.insert(array, i)
   end
+
   table.insert(array, "---Comments-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  if type(ticket.Comments) ~= nil then
+
+  if type(ticket.Comments) ~= "userdata" then
     for i in ipairs(ticket.Comments) do
       local comment = string.gsub(ticket.Comments[i], "\n", "")
       table.insert(array, comment)
-  table.insert(array, "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+
+      table.insert(array, "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+
     end
   end
+  cachedTickets[ticket.TicketNumber] = array
+
   return array
 end
 function M.goApi(key)
-  if M.cachedSearch ~= nil then
-    return M.cachedSearch
-  end
-  local ticket = io.popen("./jira-client --ticket " .. key):read("*all")
-  M.cachedSearch = vim.json.decode(ticket)
+  local ticket = io.popen("jira-client --ticket " .. key):read("*all")
   return vim.json.decode(ticket)
 end
 
@@ -88,23 +98,10 @@ function M.open_win(win_h, win_w)
 end
 
 function M.setLinesToWin(ticket)
-  local lines = toArrayString(ticket)
   vim.api.nvim_buf_set_option(buf, "modifiable", true)
 
-  vim.api.nvim_buf_set_lines(buf, 0, -1,false, lines)
+  vim.api.nvim_buf_set_lines(buf, 0, -1,false, ticket)
   vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
 end
 
-function M.dump(o)
-  if type(o) == 'table' then
-    local s = '{ '
-    for k,v in pairs(o) do
-      if type(k) ~= 'number' then k = '"'..k..'"' end
-      s = s .. '['..k..'] = ' .. M.dump(v) .. ','
-    end
-    return s .. '} '
-  else
-    return tostring(o)
-  end
-end
 return M
