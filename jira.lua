@@ -37,16 +37,24 @@ M.entry_maker = function(entry)
       end
 
 function M.GoApi()
-  local command = "jira-client --query 'project=TBB and status=QA'"
+  local command = "jira-client --query 'project=TBB and status=Screening'"
   vim.fn.jobstart(command, {
+    stdout_buffered = false,
     on_stdout = function (_, data)
       if not data then
+        return
+      end
+      for i, v in ipairs(data) do
+        if v == "" then
+          table.remove(data, i)
+        end
+      end
+      if next(data) == nil then
         return
       end
       local live_data = vim.fn.json_decode(data)
       for _, v in ipairs(live_data) do
         if utils.tableContains(objs, v) then
-          notify(utils.lastIndex)
           objs[utils.lastIndex] = v
         else
           table.insert(objs, v)

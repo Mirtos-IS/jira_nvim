@@ -2,6 +2,7 @@ local notify = require("notify").notify
 local utils = require("utils")
 local buf
 local cachedTickets = {}
+local ticket
 local M = {}
 
 --The ticket has this structure
@@ -16,55 +17,73 @@ local M = {}
 --     Comments []string
 -- }
 function M.openTicket(key)
+  -- notify(tostring(cachedTickets[key] ~= nil))
+  M.open_win()
   if cachedTickets[key] ~= nil then
-    M.open_win()
     M.setLinesToWin(cachedTickets[key])
   end
-  local ticket = M.goApi(key)
-  M.open_win()
-  local parsedTicket = M.toArrayString(ticket)
-  M.setLinesToWin(parsedTicket)
+  M.goApi(key)
+  -- M.open_win()
+  -- local parsedTicket = M.toArrayString(ticket)
+  -- M.setLinesToWin(parsedTicket)
 end
 
-function M.toArrayString(ticket)
+function M.toArrayString(_ticket)
   local array = {}
   table.insert(array, "---Ticket Number------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  table.insert(array, ticket.TicketNumber)
+  table.insert(array, _ticket.TicketNumber)
   table.insert(array, "---Title--------------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  table.insert(array, ticket.Title)
+  table.insert(array, _ticket.Title)
   table.insert(array, "---Reporter-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  table.insert(array, ticket.Reporter)
+  table.insert(array, _ticket.Reporter)
   table.insert(array, "---Assignee-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  table.insert(array, ticket.Assignee)
+  table.insert(array, _ticket.Assignee)
   table.insert(array, "---Priority-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  table.insert(array, ticket.Priority)
+  table.insert(array, _ticket.Priority)
   table.insert(array, "---Status-------------------------------------------------------------------------------------------------------------------------------------------------------------------")
-  table.insert(array, ticket.Status)
+  table.insert(array, _ticket.Status)
   table.insert(array, "---Description--------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
-  local desc = string.gmatch(ticket.Description, "[^\n]+")
+  local desc = string.gmatch(_ticket.Description, "[^\n]+")
   for i in desc do
     table.insert(array, i)
   end
 
   table.insert(array, "---Comments-----------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
-  if type(ticket.Comments) ~= "userdata" then
-    for i in ipairs(ticket.Comments) do
-      local comment = string.gsub(ticket.Comments[i], "\n", "")
+  if type(_ticket.Comments) ~= "userdata" then
+    for i in ipairs(_ticket.Comments) do
+      local comment = string.gsub(_ticket.Comments[i], "\n", "")
       table.insert(array, comment)
 
       table.insert(array, "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
     end
   end
-  cachedTickets[ticket.TicketNumber] = array
+  cachedTickets[_ticket.TicketNumber] = array
 
   return array
 end
 function M.goApi(key)
-  local ticket = io.popen("jira-client --ticket " .. key):read("*all")
-  return vim.json.decode(ticket)
+  local command = "jira-client --ticket " .. key
+  vim.fn.jobstart(command, {
+    stdout_buffered = true,
+    on_stdout = function (_, data)
+      if not data or next(data) == nil then
+        return
+      end
+
+      local live_data = vim.fn.json_decode(data)
+      if live_data.TicketNumber ~= nil then
+        ticket = live_data
+        cachedTickets[ticket.TicketNumber] = live_data
+      end
+    end,
+    on_exit = function ()
+      local parsedTicket = M.toArrayString(ticket)
+      M.setLinesToWin(parsedTicket)
+    end
+  })
 end
 
 function M.open_win(win_h, win_w)
@@ -97,11 +116,16 @@ function M.open_win(win_h, win_w)
   vim.keymap.set('n', '<ESC>', '<cmd>q!<CR>', {silent=true, buffer=buf})
 end
 
-function M.setLinesToWin(ticket)
+function M.setLinesToWin(_ticket)
   vim.api.nvim_buf_set_option(buf, "modifiable", true)
-
-  vim.api.nvim_buf_set_lines(buf, 0, -1,false, ticket)
+  vim.api.nvim_buf_set_lines(buf, 0, -1,true, _ticket)
   vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
+end
+
+---Source: https://stackoverflow.com/a/18864453/9714875
+function OpenOnBrowser()
+  local url = "https://turnoverbnb.atlassian.net/browse/" .. ticket.TicketNumber
+  io.popen("xdg-open " .. url):close()
 end
 
 return M

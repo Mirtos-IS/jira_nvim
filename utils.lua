@@ -1,11 +1,11 @@
 local M = {}
-local notify = require("notify").notify
-local lastIndex;
+M.notify = require("notify").notify
+M.lastIndex = 0;
 
 function M.tableContains(table, elem)
   for i, v in ipairs(table) do
     if v.Key == elem.Key then
-      lastIndex = i
+      M.lastIndex = i
       return true
     end
   end
@@ -24,6 +24,8 @@ function M.dump(o)
     return tostring(o)
   end
 end
+
+local open_cmd
 
 
 return M

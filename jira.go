@@ -39,7 +39,7 @@ type TicketFields struct {
     Assignee Creator
     Created string
     Updated string
-    Priority map[string]any //This is a nice way with i don't want to struct the data
+    Priority map[string]any
     Status map[string]any
     Description Description
     Comment Comment

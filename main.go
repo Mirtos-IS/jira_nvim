@@ -37,8 +37,6 @@ func helpCommands() string {
 
 func main() {
     args := os.Args[1:]
-
-    fmt.Println(args)
     if args[0] == "--query" {
         if len(args) <= 1 {
             fmt.Println("not enough arguments")
@@ -47,13 +45,8 @@ func main() {
         if err != nil {
             fmt.Println(err)
         }
-
-        for _,v := range result {
-            resultJson, _ := json.Marshal(v)
-            fmt.Println(string(resultJson))
-        }
-        // resultJson, err := json.Marshal(result)
-        // fmt.Println(string(resultJson))
+        resultJson, err := json.Marshal(result)
+        fmt.Println(string(resultJson))
         return
     }
     if args[0] == "--ticket" {
